@@ -1,6 +1,7 @@
 package dto
 
 type RegisterRequest struct {
+	Username string `json:"username" binding:"required,min=3,max=50"`
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=6"`
 }
@@ -11,6 +12,17 @@ type LoginRequest struct {
 }
 
 type UserResponse struct {
-	ID    uint   `json:"id"`
-	Email string `json:"email"`
+	ID       uint   `json:"id"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+}
+
+type AuthResponse struct {
+	User  UserResponse  `json:"user"`
+	Token TokenResponse `json:"token"`
+}
+
+type TokenResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
 }

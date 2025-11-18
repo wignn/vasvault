@@ -9,31 +9,128 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type UserService struct {
-	repository repositories.UserRepository
+type UserServiceInterface interface {
+	Register(request dto.RegisterRequest) (*dto.UserResponse, error)
+	Login(request dto.LoginRequest) (*dto.UserResponse, error)
+	GetUser(id uint) (*models.User, error)
+	GetUserByID(id uint) (*dto.UserResponse, error)
+	UpdateUser(id uint, request dto.RegisterRequest) (*dto.UserResponse, error)
 }
 
-func NewAuthService(r repositories.UserRepository) UserService {
-	return UserService{
-		repository: r,
-	}
+type UserService struct {
+	repository repositories.UserRepositoryInterface
+}
+
+func NewUserService(repo repositories.UserRepositoryInterface) UserServiceInterface {
+	return &UserService{repository: repo}
 }
 
 func (s *UserService) Register(request dto.RegisterRequest) (*dto.UserResponse, error) {
+	// Cek apakah email sudah terdaftar
 	if _, err := s.repository.FindByEmail(request.Email); err == nil {
 		return nil, fmt.Errorf("email already registered")
 	}
 
+	// Hash password
 	hash, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	user := &models.User{Email: request.Email, Password: string(hash)}
+	// Buat user baru
+	user := &models.User{
+		Username: request.Username,
+		Email:    request.Email,
+		Password: string(hash),
+	}
+
 	if err := s.repository.Create(user); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
-	response := &dto.UserResponse{ID: user.ID, Email: user.Email}
+	response := &dto.UserResponse{
+		ID:       user.ID,
+		Email:    user.Email,
+		Username: user.Username,
+	}
 	return response, nil
+}
+
+func (s *UserService) Login(request dto.LoginRequest) (*dto.UserResponse, error) {
+	// Cari user berdasarkan email
+	user, err := s.repository.FindByEmail(request.Email)
+	if err != nil {
+		return nil, fmt.Errorf("invalid email or password")
+	}
+
+	// Validasi password
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(request.Password)); err != nil {
+		return nil, fmt.Errorf("invalid email or password")
+	}
+
+	response := &dto.UserResponse{
+		ID:       user.ID,
+		Email:    user.Email,
+		Username: user.Username,
+	}
+	return response, nil
+}
+
+func (s *UserService) GetUserByID(id uint) (*dto.UserResponse, error) {
+	user, err := s.repository.FindByID(id)
+	if err != nil {
+		return nil, fmt.Errorf("user not found: %w", err)
+	}
+
+	response := &dto.UserResponse{
+		ID:       user.ID,
+		Email:    user.Email,
+		Username: user.Username,
+	}
+	return response, nil
+}
+
+func (s *UserService) UpdateUser(id uint, request dto.RegisterRequest) (*dto.UserResponse, error) {
+	// Cari user yang akan diupdate
+	user, err := s.repository.FindByID(id)
+	if err != nil {
+		return nil, fmt.Errorf("user not found: %w", err)
+	}
+
+	// Update field yang diberikan
+	if request.Email != "" {
+		user.Email = request.Email
+	}
+
+	if request.Password != "" {
+		hash, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, fmt.Errorf("failed to hash password: %w", err)
+		}
+		user.Password = string(hash)
+	}
+
+	if request.Username != "" {
+		user.Username = request.Username
+	}
+
+	// Simpan perubahan
+	if err := s.repository.Update(user); err != nil {
+		return nil, fmt.Errorf("failed to update user: %w", err)
+	}
+
+	response := &dto.UserResponse{
+		ID:       user.ID,
+		Email:    user.Email,
+		Username: user.Username,
+	}
+	return response, nil
+}
+
+func (s *UserService) GetUser(id uint) (*models.User, error) {
+	user, err := s.repository.FindByID(id)
+	if err != nil {
+		return nil, fmt.Errorf("user not found: %w", err)
+	}
+	return user, nil
 }
