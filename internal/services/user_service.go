@@ -26,18 +26,15 @@ func NewUserService(repo repositories.UserRepositoryInterface) UserServiceInterf
 }
 
 func (s *UserService) Register(request dto.RegisterRequest) (*dto.UserResponse, error) {
-	// Cek apakah email sudah terdaftar
 	if _, err := s.repository.FindByEmail(request.Email); err == nil {
 		return nil, fmt.Errorf("email already registered")
 	}
 
-	// Hash password
 	hash, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	// Buat user baru
 	user := &models.User{
 		Username: request.Username,
 		Email:    request.Email,
@@ -57,13 +54,12 @@ func (s *UserService) Register(request dto.RegisterRequest) (*dto.UserResponse, 
 }
 
 func (s *UserService) Login(request dto.LoginRequest) (*dto.UserResponse, error) {
-	// Cari user berdasarkan email
+
 	user, err := s.repository.FindByEmail(request.Email)
 	if err != nil {
 		return nil, fmt.Errorf("invalid email or password")
 	}
 
-	// Validasi password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(request.Password)); err != nil {
 		return nil, fmt.Errorf("invalid email or password")
 	}
@@ -91,13 +87,11 @@ func (s *UserService) GetUserByID(id uint) (*dto.UserResponse, error) {
 }
 
 func (s *UserService) UpdateUser(id uint, request dto.RegisterRequest) (*dto.UserResponse, error) {
-	// Cari user yang akan diupdate
 	user, err := s.repository.FindByID(id)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
 
-	// Update field yang diberikan
 	if request.Email != "" {
 		user.Email = request.Email
 	}
@@ -114,7 +108,6 @@ func (s *UserService) UpdateUser(id uint, request dto.RegisterRequest) (*dto.Use
 		user.Username = request.Username
 	}
 
-	// Simpan perubahan
 	if err := s.repository.Update(user); err != nil {
 		return nil, fmt.Errorf("failed to update user: %w", err)
 	}
