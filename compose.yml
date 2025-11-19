@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: vasvault-db
+    environment:
+      POSTGRES_USER: ${DB_USER:-vasvault}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-vasvault123}
+      POSTGRES_DB: ${DB_NAME:-vasvault}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - vasvault-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-vasvault}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vasvault-app
+    environment:
+      DATABASE_URL: "host=postgres user=${DB_USER:-vasvault} password=${DB_PASSWORD:-vasvault123} dbname=${DB_NAME:-vasvault} port=5432 sslmode=disable TimeZone=Asia/Jakarta"
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-this-in-production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your-refresh-secret-key}
+      GIN_MODE: ${GIN_MODE:-release}
+      PORT: ${APP_PORT:-8080}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - vasvault-network
+    restart: unless-stopped
+    volumes:
+      - ./uploads:/root/uploads
+
+networks:
+  vasvault-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

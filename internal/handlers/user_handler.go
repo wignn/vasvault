@@ -19,7 +19,6 @@ func NewUserHandler(userService services.UserServiceInterface) *UserHandler {
 	}
 }
 
-// Me handler untuk mendapatkan user yang sedang login
 func (h *UserHandler) Me(c *gin.Context) {
 	uid, ok := c.Get("userID")
 	if !ok {
@@ -29,7 +28,6 @@ func (h *UserHandler) Me(c *gin.Context) {
 
 	id, ok := uid.(uint)
 	if !ok {
-		// Handle jwt lib returns float64 when decoding numbers
 		if fid, ok := uid.(float64); ok {
 			id = uint(fid)
 		} else {
@@ -52,7 +50,6 @@ func (h *UserHandler) Me(c *gin.Context) {
 	utils.RespondJSON(c, http.StatusOK, response, "ok")
 }
 
-// Register handler untuk membuat user baru
 func (h *UserHandler) Register(c *gin.Context) {
 	var userRequest dto.RegisterRequest
 
@@ -94,7 +91,6 @@ func (h *UserHandler) Register(c *gin.Context) {
 	utils.RespondJSON(c, http.StatusOK, response, "User created successfully")
 }
 
-// Login handler untuk autentikasi user
 func (h *UserHandler) Login(c *gin.Context) {
 	var loginRequest dto.LoginRequest
 
@@ -130,7 +126,6 @@ func (h *UserHandler) Login(c *gin.Context) {
 	utils.RespondJSON(c, http.StatusOK, response, "Login successful")
 }
 
-// UpdateProfile handler untuk update profil user
 func (h *UserHandler) UpdateProfile(c *gin.Context) {
 	uid, ok := c.Get("userID")
 	if !ok {

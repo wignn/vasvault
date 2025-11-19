@@ -10,11 +10,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// UserCtxKey is the context key where the middleware stores the authenticated user ID.
 const UserCtxKey = "userID"
 
-// BearerAuth validates the Authorization: Bearer <token> header and puts the user ID
-// into the request context under UserCtxKey. On failure it returns 401.
 func BearerAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		auth := r.Header.Get("Authorization")
@@ -44,7 +41,6 @@ func BearerAuth(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// GinBearerAuth validates Authorization: Bearer <token> header and stores claims.ID in gin.Context under "userID".
 func GinBearerAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		auth := c.GetHeader("Authorization")
