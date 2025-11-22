@@ -8,9 +8,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: production
-      url: http://${{ secrets.VPS_HOST }}:8080
+    environment: production
     if: github.repository == 'wignn/vasvault'
 
     steps:
