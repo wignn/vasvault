@@ -14,14 +14,14 @@ jobs:
     steps:
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.0
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
           port: ${{ secrets.VPS_PORT }}
           envs: ENV_FILE
-        env:
-          ENV_FILE: ${{ secrets.ENV_FILE }}
           script: |
             DEPLOY_DIR="$HOME/vasvault"
             
