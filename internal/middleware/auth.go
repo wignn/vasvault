@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -62,6 +63,7 @@ func GinBearerAuth() gin.HandlerFunc {
 			return
 		}
 
+		fmt.Println("Token claims.ID:", claims.ID)
 		c.Set("userID", claims.ID)
 		c.Next()
 	}

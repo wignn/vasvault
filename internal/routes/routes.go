@@ -15,6 +15,11 @@ func InitRoutes(r *gin.Engine, db *gorm.DB) {
 	userService := services.NewUserService(userRepo)
 	userHandler := handlers.NewUserHandler(userService)
 
+	// Category module
+	categoryRepo := repositories.NewCategoryRepository(db)
+	categoryService := services.NewCategoryService(categoryRepo)
+	categoryHandler := handlers.NewCategoryHandler(categoryService)
+
 	// API v1 routes
 	apiV1 := r.Group("/api/v1")
 	{
@@ -29,6 +34,13 @@ func InitRoutes(r *gin.Engine, db *gorm.DB) {
 		{
 			protected.GET("/me", userHandler.Me)
 			protected.PUT("/profile", userHandler.UpdateProfile)
+
+			// Category endpoints
+			protected.POST("/categories", categoryHandler.Create)
+			protected.GET("/categories", categoryHandler.List)
+			protected.GET("/categories/:id", categoryHandler.Detail)
+			protected.PUT("/categories/:id", categoryHandler.Update)
+			protected.DELETE("/categories/:id", categoryHandler.Delete)
 		}
 	}
 }
