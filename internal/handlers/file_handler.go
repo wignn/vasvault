@@ -88,7 +88,7 @@ func (h *FileHandler) ListMyFiles(c *gin.Context) {
 			return
 		}
 	}
-	
+
 	categoryIDParam := c.Query("categoryId")
 	var categoryID *uint
 
@@ -195,4 +195,17 @@ func (h *FileHandler) UpdateCategories(c *gin.Context) {
 	}
 
 	utils.RespondJSON(c, http.StatusOK, nil, "categories updated successfully")
+}
+
+// StorageSummary - GET /storage/summary
+func (h *FileHandler) StorageSummary(c *gin.Context) {
+	userID := c.GetUint("userID")
+
+	resp, err := h.FileService.GetStorageSummary(userID)
+	if err != nil {
+		utils.RespondJSON(c, http.StatusInternalServerError, nil, err.Error())
+		return
+	}
+
+	utils.RespondJSON(c, http.StatusOK, resp, "ok")
 }

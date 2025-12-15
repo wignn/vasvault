@@ -24,6 +24,7 @@ type FileServiceInterface interface {
 	AssignCategories(userID, fileID uint, categoryIDs []uint) error
 	RemoveCategories(userID, fileID uint, categoryIDs []uint) error
 	UpdateCategories(userID, fileID uint, categoryIDs []uint) error
+	GetStorageSummary(userID uint) (*dto.StorageSummaryResponse, error)
 }
 
 type FileService struct {
@@ -273,6 +274,49 @@ func (s *FileService) ListUserFilesWithOptionalCategory(userID uint, categoryID 
 			CreatedAt:  file.UploadedAt,
 		})
 	}
-	
+
 	return response, nil
+}
+
+func (s *FileService) GetStorageSummary(userID uint) (*dto.StorageSummaryResponse, error) {
+	// Max storage: 5 GiB
+	const maxBytes int64 = 5 * 1024 * 1024 * 1024
+
+	used, err := s.repository.TotalUserStorage(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var latestDto *dto.FileResponse
+	latest, err := s.repository.GetLatestFileForUser(userID)
+	if err == nil && latest != nil {
+		var categories []dto.CategorySimple
+		for _, cat := range latest.Categories {
+			categories = append(categories, dto.CategorySimple{ID: cat.ID, Name: cat.Name, Color: cat.Color})
+		}
+		f := dto.FileResponse{
+			ID:         latest.ID,
+			UserId:     latest.UserID,
+			FolderId:   latest.WorkspaceID,
+			FileName:   latest.Filename,
+			FilePath:   latest.Filepath,
+			MimeType:   latest.Mimetype,
+			Size:       latest.Size,
+			Categories: categories,
+			CreatedAt:  latest.UploadedAt,
+		}
+		latestDto = &f
+	}
+
+	remaining := maxBytes - used
+	if remaining < 0 {
+		remaining = 0
+	}
+
+	return &dto.StorageSummaryResponse{
+		MaxBytes:       maxBytes,
+		UsedBytes:      used,
+		RemainingBytes: remaining,
+		LatestFile:     latestDto,
+	}, nil
 }

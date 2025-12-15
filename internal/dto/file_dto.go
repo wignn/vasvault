@@ -28,3 +28,10 @@ type FileResponse struct {
 type AssignCategoriesRequest struct {
 	CategoryIDs []uint `json:"category_ids" binding:"required"`
 }
+
+type StorageSummaryResponse struct {
+	MaxBytes       int64         `json:"max_bytes"`
+	UsedBytes      int64         `json:"used_bytes"`
+	RemainingBytes int64         `json:"remaining_bytes"`
+	LatestFile     *FileResponse `json:"latest_file,omitempty"`
+}

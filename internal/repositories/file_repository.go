@@ -17,13 +17,14 @@ type FileRepositoryInterface interface {
 	AssignCategories(fileID uint, categoryIDs []uint) error
 	RemoveCategories(fileID uint, categoryIDs []uint) error
 	ClearAllCategories(fileID uint) error
+	TotalUserStorage(userID uint) (int64, error)
+	GetLatestFileForUser(userID uint) (*models.File, error)
 }
 
 type FileRepository struct {
 	db *gorm.DB
 }
 
-// Create implements FileRepositoryInterface.
 func (r *FileRepository) Create(file *models.File) error {
 	return r.db.Create(file).Error
 }
@@ -123,4 +124,20 @@ func (r *FileRepository) ListUserFilesWithOptionalCategory(userID uint, category
 		return nil, err
 	}
 	return files, nil
+}
+
+func (r *FileRepository) TotalUserStorage(userID uint) (int64, error) {
+	var total int64
+	if err := r.db.Model(&models.File{}).Select("COALESCE(SUM(size),0)").Where("user_id = ?", userID).Scan(&total).Error; err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
+func (r *FileRepository) GetLatestFileForUser(userID uint) (*models.File, error) {
+	var file models.File
+	if err := r.db.Preload("Categories").Where("user_id = ?", userID).Order("uploaded_at desc").First(&file).Error; err != nil {
+		return nil, err
+	}
+	return &file, nil
 }

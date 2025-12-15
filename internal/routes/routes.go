@@ -54,22 +54,23 @@ func InitRoutes(r *gin.Engine, db *gorm.DB) {
 			protected.GET("/files", fileHandler.ListMyFiles)
 			protected.GET("/files/:id", fileHandler.GetByID)
 			protected.DELETE("/files/:id", fileHandler.Delete)
+			protected.GET("/storage/summary", fileHandler.StorageSummary)
 
 			// File-Category Management
 			protected.POST("/files/:id/categories/assign", fileHandler.AssignCategories)
 			protected.POST("/files/:id/categories/remove", fileHandler.RemoveCategories)
 			protected.PUT("/files/:id/categories", fileHandler.UpdateCategories)
-      
-      // Workspace
+
+			// Workspace
 			protected.POST("/workspaces", workspaceHandler.Create)
-			protected.GET("/workspaces", workspaceHandler.List) 
+			protected.GET("/workspaces", workspaceHandler.List)
 			protected.GET("/workspaces/:id", workspaceHandler.Detail)
-			protected.PUT("/workspaces/:id", workspaceHandler.Update)   
+			protected.PUT("/workspaces/:id", workspaceHandler.Update)
 			protected.DELETE("/workspaces/:id", workspaceHandler.Delete)
 			protected.POST("/workspaces/:id/members", workspaceHandler.AddMember)
 			protected.PUT("/workspaces/:id/members/:userId", workspaceHandler.UpdateMemberRole)
 			protected.DELETE("/workspaces/:id/members/:userId", workspaceHandler.RemoveMember)
-			
+
 		}
 	}
 }
