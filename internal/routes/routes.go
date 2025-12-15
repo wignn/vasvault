@@ -24,6 +24,10 @@ func InitRoutes(r *gin.Engine, db *gorm.DB) {
 	categoryService := services.NewCategoryService(categoryRepo)
 	categoryHandler := handlers.NewCategoryHandler(categoryService)
 
+	workspaceRepo := repositories.NewWorkspaceRepository(db)
+	workspaceService := services.NewWorkspaceService(workspaceRepo, userRepo)
+	workspaceHandler := handlers.NewWorkspaceHandler(workspaceService)
+
 	// API v1 routes
 	apiV1 := r.Group("/api/v1")
 	{
@@ -55,6 +59,17 @@ func InitRoutes(r *gin.Engine, db *gorm.DB) {
 			protected.POST("/files/:id/categories/assign", fileHandler.AssignCategories)
 			protected.POST("/files/:id/categories/remove", fileHandler.RemoveCategories)
 			protected.PUT("/files/:id/categories", fileHandler.UpdateCategories)
+      
+      // Workspace
+			protected.POST("/workspaces", workspaceHandler.Create)
+			protected.GET("/workspaces", workspaceHandler.List) 
+			protected.GET("/workspaces/:id", workspaceHandler.Detail)
+			protected.PUT("/workspaces/:id", workspaceHandler.Update)   
+			protected.DELETE("/workspaces/:id", workspaceHandler.Delete)
+			protected.POST("/workspaces/:id/members", workspaceHandler.AddMember)
+			protected.PUT("/workspaces/:id/members/:userId", workspaceHandler.UpdateMemberRole)
+			protected.DELETE("/workspaces/:id/members/:userId", workspaceHandler.RemoveMember)
+			
 		}
 	}
 }
