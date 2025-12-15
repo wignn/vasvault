@@ -20,7 +20,7 @@ func NewFileHandler(fileService services.FileServiceInterface) *FileHandler {
 	}
 }
 
-func  (h *FileHandler) Upload(c *gin.Context) {
+func (h *FileHandler) Upload(c *gin.Context) {
 	uid, ok := c.Get("userID")
 	if !ok {
 		utils.RespondJSON(c, http.StatusUnauthorized, nil, "user not found in context")
@@ -28,7 +28,7 @@ func  (h *FileHandler) Upload(c *gin.Context) {
 	}
 
 	userID, ok := uid.(uint)
-	if !ok {	
+	if !ok {
 		if fid, ok := uid.(float64); ok {
 			userID = uint(fid)
 		} else {
@@ -55,7 +55,7 @@ func  (h *FileHandler) Upload(c *gin.Context) {
 	utils.RespondJSON(c, http.StatusOK, response, "file uploaded successfully")
 }
 
-func (h *FileHandler) GetByID (c *gin.Context) {
+func (h *FileHandler) GetByID(c *gin.Context) {
 	idParam := c.Param("id")
 	fileID, err := strconv.ParseUint(idParam, 10, 64)
 	if err != nil {
@@ -109,4 +109,76 @@ func (h *FileHandler) Delete(c *gin.Context) {
 		return
 	}
 	utils.RespondJSON(c, http.StatusOK, nil, "file deleted successfully")
+}
+
+// AssignCategories - POST /files/:id/categories/assign
+func (h *FileHandler) AssignCategories(c *gin.Context) {
+	userID := c.GetUint("userID")
+	idParam := c.Param("id")
+	fileID, err := strconv.ParseUint(idParam, 10, 64)
+	if err != nil {
+		utils.RespondJSON(c, http.StatusBadRequest, nil, "invalid file id")
+		return
+	}
+
+	var req dto.AssignCategoriesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondJSON(c, http.StatusBadRequest, nil, err.Error())
+		return
+	}
+
+	if err := h.FileService.AssignCategories(userID, uint(fileID), req.CategoryIDs); err != nil {
+		utils.RespondJSON(c, http.StatusBadRequest, nil, err.Error())
+		return
+	}
+
+	utils.RespondJSON(c, http.StatusOK, nil, "categories assigned successfully")
+}
+
+// RemoveCategories - POST /files/:id/categories/remove
+func (h *FileHandler) RemoveCategories(c *gin.Context) {
+	userID := c.GetUint("userID")
+	idParam := c.Param("id")
+	fileID, err := strconv.ParseUint(idParam, 10, 64)
+	if err != nil {
+		utils.RespondJSON(c, http.StatusBadRequest, nil, "invalid file id")
+		return
+	}
+
+	var req dto.AssignCategoriesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondJSON(c, http.StatusBadRequest, nil, err.Error())
+		return
+	}
+
+	if err := h.FileService.RemoveCategories(userID, uint(fileID), req.CategoryIDs); err != nil {
+		utils.RespondJSON(c, http.StatusBadRequest, nil, err.Error())
+		return
+	}
+
+	utils.RespondJSON(c, http.StatusOK, nil, "categories removed successfully")
+}
+
+// UpdateCategories - PUT /files/:id/categories
+func (h *FileHandler) UpdateCategories(c *gin.Context) {
+	userID := c.GetUint("userID")
+	idParam := c.Param("id")
+	fileID, err := strconv.ParseUint(idParam, 10, 64)
+	if err != nil {
+		utils.RespondJSON(c, http.StatusBadRequest, nil, "invalid file id")
+		return
+	}
+
+	var req dto.AssignCategoriesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondJSON(c, http.StatusBadRequest, nil, err.Error())
+		return
+	}
+
+	if err := h.FileService.UpdateCategories(userID, uint(fileID), req.CategoryIDs); err != nil {
+		utils.RespondJSON(c, http.StatusBadRequest, nil, err.Error())
+		return
+	}
+
+	utils.RespondJSON(c, http.StatusOK, nil, "categories updated successfully")
 }

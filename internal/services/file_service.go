@@ -20,6 +20,9 @@ type FileServiceInterface interface {
 	GetFileByID(fileID uint) (*dto.FileResponse, error)
 	ListUserFiles(userID uint) ([]dto.FileResponse, error)
 	DeleteFile(fileID uint) error
+	AssignCategories(userID, fileID uint, categoryIDs []uint) error
+	RemoveCategories(userID, fileID uint, categoryIDs []uint) error
+	UpdateCategories(userID, fileID uint, categoryIDs []uint) error
 }
 
 type FileService struct {
@@ -69,54 +72,98 @@ func (s *FileService) UploadFile(userID uint, file multipart.File, header *multi
 		return nil, fmt.Errorf("failed to store file metadata: %w", err)
 	}
 
+	// Assign categories jika ada
+	if len(request.CategoryIDs) > 0 {
+		if err := s.repository.AssignCategories(model.ID, request.CategoryIDs); err != nil {
+			return nil, fmt.Errorf("failed to assign categories: %w", err)
+		}
+	}
+
+	// Reload file dengan categories untuk response
+	fileWithCategories, err := s.repository.FindByIDWithCategories(model.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load file with categories: %w", err)
+	}
+
+	var categories []dto.CategorySimple
+	for _, cat := range fileWithCategories.Categories {
+		categories = append(categories, dto.CategorySimple{
+			ID:    cat.ID,
+			Name:  cat.Name,
+			Color: cat.Color,
+		})
+	}
+
 	response := dto.FileResponse{
-		ID:        model.ID,
-		UserId:    model.UserID,
-		FolderId:  model.WorkspaceID,
-		FileName:  model.Filename,
-		FilePath:  model.Filepath,
-		MimeType:  model.Mimetype,
-		Size:      model.Size,
-		CreatedAt: model.UploadedAt,
+		ID:         model.ID,
+		UserId:     model.UserID,
+		FolderId:   model.WorkspaceID,
+		FileName:   model.Filename,
+		FilePath:   model.Filepath,
+		MimeType:   model.Mimetype,
+		Size:       model.Size,
+		Categories: categories,
+		CreatedAt:  model.UploadedAt,
 	}
 
 	return &response, nil
 }
 
 func (s *FileService) GetFileByID(fileID uint) (*dto.FileResponse, error) {
-	file, err := s.repository.FindByID(fileID)
+	file, err := s.repository.FindByIDWithCategories(fileID)
 	if err != nil {
 		return nil, fmt.Errorf("file not found: %w", err)
 	}
+
+	var categories []dto.CategorySimple
+	for _, cat := range file.Categories {
+		categories = append(categories, dto.CategorySimple{
+			ID:    cat.ID,
+			Name:  cat.Name,
+			Color: cat.Color,
+		})
+	}
+
 	response := dto.FileResponse{
-		ID:        file.ID,
-		UserId:    file.UserID,
-		FolderId:  file.WorkspaceID,
-		FileName:  file.Filename,
-		FilePath:  file.Filepath,
-		MimeType:  file.Mimetype,
-		Size:      file.Size,
-		CreatedAt: file.UploadedAt,
+		ID:         file.ID,
+		UserId:     file.UserID,
+		FolderId:   file.WorkspaceID,
+		FileName:   file.Filename,
+		FilePath:   file.Filepath,
+		MimeType:   file.Mimetype,
+		Size:       file.Size,
+		Categories: categories,
+		CreatedAt:  file.UploadedAt,
 	}
 	return &response, nil
 }
 
 func (s *FileService) ListUserFiles(userID uint) ([]dto.FileResponse, error) {
-	files, err := s.repository.ListUserFiles(userID)
+	files, err := s.repository.ListUserFilesWithCategories(userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch user file: %w", err)
 	}
 	var responses []dto.FileResponse
 	for _, f := range files {
+		var categories []dto.CategorySimple
+		for _, cat := range f.Categories {
+			categories = append(categories, dto.CategorySimple{
+				ID:    cat.ID,
+				Name:  cat.Name,
+				Color: cat.Color,
+			})
+		}
+
 		responses = append(responses, dto.FileResponse{
-			ID:        f.ID,
-			UserId:    f.UserID,
-			FolderId:  f.WorkspaceID,
-			FileName:  f.Filename,
-			FilePath:  f.Filepath,
-			MimeType:  f.Mimetype,
-			Size:      f.Size,
-			CreatedAt: f.UploadedAt,
+			ID:         f.ID,
+			UserId:     f.UserID,
+			FolderId:   f.WorkspaceID,
+			FileName:   f.Filename,
+			FilePath:   f.Filepath,
+			MimeType:   f.Mimetype,
+			Size:       f.Size,
+			Categories: categories,
+			CreatedAt:  f.UploadedAt,
 		})
 	}
 	return responses, err
@@ -133,5 +180,65 @@ func (s *FileService) DeleteFile(fileID uint) error {
 	if err := s.repository.Delete(fileID); err != nil {
 		return fmt.Errorf("failed to delete file metadata: %w", err)
 	}
+	return nil
+}
+
+// AssignCategories menambahkan kategori ke file (tidak menghapus kategori yang sudah ada)
+func (s *FileService) AssignCategories(userID, fileID uint, categoryIDs []uint) error {
+	// Validasi file milik user
+	file, err := s.repository.FindByID(fileID)
+	if err != nil {
+		return fmt.Errorf("file not found")
+	}
+	if file.UserID != userID {
+		return fmt.Errorf("unauthorized: file does not belong to user")
+	}
+
+	if err := s.repository.AssignCategories(fileID, categoryIDs); err != nil {
+		return fmt.Errorf("failed to assign categories: %w", err)
+	}
+	return nil
+}
+
+// RemoveCategories menghapus kategori tertentu dari file
+func (s *FileService) RemoveCategories(userID, fileID uint, categoryIDs []uint) error {
+	// Validasi file milik user
+	file, err := s.repository.FindByID(fileID)
+	if err != nil {
+		return fmt.Errorf("file not found")
+	}
+	if file.UserID != userID {
+		return fmt.Errorf("unauthorized: file does not belong to user")
+	}
+
+	if err := s.repository.RemoveCategories(fileID, categoryIDs); err != nil {
+		return fmt.Errorf("failed to remove categories: %w", err)
+	}
+	return nil
+}
+
+// UpdateCategories mengganti semua kategori file dengan yang baru
+func (s *FileService) UpdateCategories(userID, fileID uint, categoryIDs []uint) error {
+	// Validasi file milik user
+	file, err := s.repository.FindByID(fileID)
+	if err != nil {
+		return fmt.Errorf("file not found")
+	}
+	if file.UserID != userID {
+		return fmt.Errorf("unauthorized: file does not belong to user")
+	}
+
+	// Clear semua kategori lama
+	if err := s.repository.ClearAllCategories(fileID); err != nil {
+		return fmt.Errorf("failed to clear categories: %w", err)
+	}
+
+	// Assign kategori baru
+	if len(categoryIDs) > 0 {
+		if err := s.repository.AssignCategories(fileID, categoryIDs); err != nil {
+			return fmt.Errorf("failed to assign new categories: %w", err)
+		}
+	}
+
 	return nil
 }

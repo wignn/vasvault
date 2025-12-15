@@ -3,16 +3,28 @@ package dto
 import "time"
 
 type UploadFileRequest struct {
-	FolderId *uint `json:"folder_id" binding:"omitempty"`
+	FolderId    *uint  `json:"folder_id" binding:"omitempty"`
+	CategoryIDs []uint `json:"category_ids" binding:"omitempty"`
+}
+
+type CategorySimple struct {
+	ID    uint   `json:"id"`
+	Name  string `json:"name"`
+	Color string `json:"color"`
 }
 
 type FileResponse struct {
-	ID 			uint 		`json:"id"`
-	UserId		uint 		`json:"user_id"`
-	FolderId	*uint		`json:"folder_id" binding:"omitempty"`
-	FileName 	string		`json:"file_name"`
-	FilePath	string		`json:"file_path"`
-	MimeType	string		`json:"mime_type"`
-	Size		int64  		`json:"size"`
-	CreatedAt 	time.Time 	`json:"created_at"`
+	ID         uint             `json:"id"`
+	UserId     uint             `json:"user_id"`
+	FolderId   *uint            `json:"folder_id" binding:"omitempty"`
+	FileName   string           `json:"file_name"`
+	FilePath   string           `json:"file_path"`
+	MimeType   string           `json:"mime_type"`
+	Size       int64            `json:"size"`
+	Categories []CategorySimple `json:"categories,omitempty"`
+	CreatedAt  time.Time        `json:"created_at"`
+}
+
+type AssignCategoriesRequest struct {
+	CategoryIDs []uint `json:"category_ids" binding:"required"`
 }
