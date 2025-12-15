@@ -30,8 +30,8 @@ type AssignCategoriesRequest struct {
 }
 
 type StorageSummaryResponse struct {
-	MaxBytes       int64         `json:"max_bytes"`
-	UsedBytes      int64         `json:"used_bytes"`
-	RemainingBytes int64         `json:"remaining_bytes"`
-	LatestFile     *FileResponse `json:"latest_file,omitempty"`
+	MaxBytes       int64          `json:"max_bytes"`
+	UsedBytes      int64          `json:"used_bytes"`
+	RemainingBytes int64          `json:"remaining_bytes"`
+	LatestFiles    []FileResponse `json:"latest_files,omitempty"`
 }

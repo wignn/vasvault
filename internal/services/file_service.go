@@ -286,10 +286,13 @@ func (s *FileService) GetStorageSummary(userID uint) (*dto.StorageSummaryRespons
 	if err != nil {
 		return nil, err
 	}
+	files, err := s.repository.GetLatestFilesForUser(userID, 10)
+	if err != nil {
+		files = []models.File{}
+	}
 
-	var latestDto *dto.FileResponse
-	latest, err := s.repository.GetLatestFileForUser(userID)
-	if err == nil && latest != nil {
+	var latestDtos []dto.FileResponse
+	for _, latest := range files {
 		var categories []dto.CategorySimple
 		for _, cat := range latest.Categories {
 			categories = append(categories, dto.CategorySimple{ID: cat.ID, Name: cat.Name, Color: cat.Color})
@@ -305,7 +308,7 @@ func (s *FileService) GetStorageSummary(userID uint) (*dto.StorageSummaryRespons
 			Categories: categories,
 			CreatedAt:  latest.UploadedAt,
 		}
-		latestDto = &f
+		latestDtos = append(latestDtos, f)
 	}
 
 	remaining := maxBytes - used
@@ -317,6 +320,6 @@ func (s *FileService) GetStorageSummary(userID uint) (*dto.StorageSummaryRespons
 		MaxBytes:       maxBytes,
 		UsedBytes:      used,
 		RemainingBytes: remaining,
-		LatestFile:     latestDto,
+		LatestFiles:    latestDtos,
 	}, nil
 }
