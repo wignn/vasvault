@@ -31,6 +31,10 @@ func NewWorkspaceService(repo repositories.WorkspaceRepository, userRepo reposit
 }
 func (s *workspaceService) CreateWorkspace(userID uint, req dto.CreateWorkspaceRequest) (*models.Workspace, error) {
 
+	if _, err := s.userRepo.FindByID(userID); err != nil {
+		return nil, err
+	}
+
 	workspace := &models.Workspace{
 		Name:        req.Name,
 		Description: req.Description,
@@ -58,7 +62,7 @@ func (s *workspaceService) GetMyWorkspaces(userID uint, search string) ([]dto.Wo
 
 	var responses []dto.WorkspaceResponse
 	for _, w := range workspaces {
-		// determine role for the user in this workspace
+
 		role := ""
 		for _, m := range w.Memberships {
 			if m.UserID == userID {
@@ -74,8 +78,10 @@ func (s *workspaceService) GetMyWorkspaces(userID uint, search string) ([]dto.Wo
 			ID:          w.ID,
 			Name:        w.Name,
 			Description: w.Description,
+			OwnerID:     w.OwnerID,
 			Role:        role,
 			OwnerName:   w.Owner.Username,
+			CreatedAt:   w.CreatedAt,
 		})
 	}
 
