@@ -36,9 +36,9 @@ func InitRoutes(r *gin.Engine, db *gorm.DB) {
 		apiV1.POST("/register", userHandler.Register)
 		apiV1.POST("/refresh", userHandler.Refresh)
 
-		// Protected routes
+		// Protected routes (require API key + Bearer token)
 		protected := apiV1.Group("")
-		protected.Use(middleware.GinBearerAuth())
+		protected.Use(middleware.GinAPIKeyAuth(), middleware.GinBearerAuth())
 		{
 			protected.GET("/me", userHandler.Me)
 			protected.PUT("/profile", userHandler.UpdateProfile)
