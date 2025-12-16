@@ -1,4 +1,4 @@
-````markdown
+
 # PUT /api/v1/files/:id
 
 Method: PUT (application/json)
@@ -52,5 +52,3 @@ Notes for integrators:
 - If you need to preserve the original filename extension, you may omit the extension in `new_name` — the server will append the original extension automatically.
 
 See implementation: [internal/handlers/file_handler.go](internal/handlers/file_handler.go#L1) and [internal/services/file_service.go](internal/services/file_service.go#L1).
-
-````
