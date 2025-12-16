@@ -51,11 +51,13 @@ func (r *workspaceRepository) FindByUserID(userID uint, search string) ([]models
 	var workspaces []models.Workspace
 
 	query := r.db.Model(&models.Workspace{}).
+		Select("workspaces.*").
 		Preload("Owner").
 		Preload("Memberships").
+		Preload("Memberships.User").
 		Joins("LEFT JOIN workspace_members ON workspace_members.workspace_id = workspaces.id").
 		Where("workspaces.owner_id = ? OR workspace_members.user_id = ?", userID, userID).
-		Distinct("workspaces.id")
+		Distinct()
 
 	if search != "" {
 		query = query.Where("workspaces.name ILIKE ?", "%"+search+"%")
