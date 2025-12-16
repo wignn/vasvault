@@ -54,6 +54,7 @@ func InitRoutes(r *gin.Engine, db *gorm.DB) {
 			protected.GET("/files", fileHandler.ListMyFiles)
 			protected.GET("/files/:id", fileHandler.GetByID)
 			protected.DELETE("/files/:id", fileHandler.Delete)
+			protected.PUT("/files/:id", fileHandler.Rename)
 			protected.GET("/files/:id/download", fileHandler.Download)
 			protected.GET("/files/:id/thumbnail", fileHandler.Thumbnail)
 			protected.GET("/storage/summary", fileHandler.StorageSummary)

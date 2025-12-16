@@ -316,3 +316,27 @@ func (h *FileHandler) StorageSummary(c *gin.Context) {
 
 	utils.RespondJSON(c, http.StatusOK, resp, "ok")
 }
+
+func (h *FileHandler) Rename(c *gin.Context) {
+	userID := c.GetUint("userID")
+	idParam := c.Param("id")
+	fileID, err := strconv.ParseUint(idParam, 10, 64)
+	if err != nil {
+		utils.RespondJSON(c, http.StatusBadRequest, nil, "invalid file id")
+		return
+	}
+
+	var req dto.RenameFileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondJSON(c, http.StatusBadRequest, nil, err.Error())
+		return
+	}
+
+	resp, err := h.FileService.RenameFile(userID, uint(fileID), req.NewName)
+	if err != nil {
+		utils.RespondJSON(c, http.StatusBadRequest, nil, err.Error())
+		return
+	}
+
+	utils.RespondJSON(c, http.StatusOK, resp, "file renamed successfully")
+}
