@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	"vasvault/pkg/utils"
@@ -65,6 +66,29 @@ func GinBearerAuth() gin.HandlerFunc {
 
 		fmt.Println("Token claims.ID:", claims.ID)
 		c.Set("userID", claims.ID)
+		c.Next()
+	}
+}
+
+func GinAPIKeyAuth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		expected := os.Getenv("API_KEY")
+		if expected == "" {
+			c.Next()
+			return
+		}
+
+		key := c.GetHeader("x-api-key")
+		if key == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing x-api-key header"})
+			return
+		}
+
+		if key != expected {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid api key"})
+			return
+		}
+
 		c.Next()
 	}
 }
