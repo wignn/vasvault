@@ -5,7 +5,6 @@ import "time"
 type UploadFileRequest struct {
 	WorkspaceId *uint  `json:"workspace_id" binding:"omitempty"`
 	CategoryIDs []uint `json:"category_ids" binding:"omitempty"`
-	WorkspaceID *uint `form:"workspace_id" json:"workspace_id"`
 }
 
 type CategorySimple struct {

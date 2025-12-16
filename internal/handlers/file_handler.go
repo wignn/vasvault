@@ -58,7 +58,7 @@ func (h *FileHandler) Upload(c *gin.Context) {
         if err == nil {
             
             workspaceID := uint(parsedID)
-            request.WorkspaceID = &workspaceID 
+            request.WorkspaceId = &workspaceID 
         }
     }
 
