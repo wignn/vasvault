@@ -1,10 +1,10 @@
 package services
 
 import (
+	"errors"
 	"vasvault/internal/dto"
 	"vasvault/internal/models"
 	"vasvault/internal/repositories"
-	"errors"
 )
 
 type WorkspaceService interface {
@@ -12,25 +12,25 @@ type WorkspaceService interface {
 	GetMyWorkspaces(userID uint, search string) ([]dto.WorkspaceResponse, error)
 	GetWorkspaceDetail(userID uint, workspaceID uint) (*dto.WorkspaceDetailResponse, error)
 	UpdateWorkspace(userID uint, workspaceID uint, req dto.UpdateWorkspaceRequest) (*models.Workspace, error)
-    DeleteWorkspace(userID uint, workspaceID uint) error
+	DeleteWorkspace(userID uint, workspaceID uint) error
 	AddMember(requesterID uint, workspaceID uint, req dto.AddMemberRequest) error
-    UpdateMemberRole(requesterID uint, workspaceID uint, targetUserID uint, req dto.UpdateMemberRoleRequest) error
-    RemoveMember(requesterID uint, workspaceID uint, targetUserID uint) error
+	UpdateMemberRole(requesterID uint, workspaceID uint, targetUserID uint, req dto.UpdateMemberRoleRequest) error
+	RemoveMember(requesterID uint, workspaceID uint, targetUserID uint) error
 }
 
 type workspaceService struct {
-	repo repositories.WorkspaceRepository
+	repo     repositories.WorkspaceRepository
 	userRepo repositories.UserRepositoryInterface
 }
 
 func NewWorkspaceService(repo repositories.WorkspaceRepository, userRepo repositories.UserRepositoryInterface) WorkspaceService {
 	return &workspaceService{
-        repo: repo, 
-        userRepo: userRepo, 
-    }
+		repo:     repo,
+		userRepo: userRepo,
+	}
 }
 func (s *workspaceService) CreateWorkspace(userID uint, req dto.CreateWorkspaceRequest) (*models.Workspace, error) {
-	
+
 	workspace := &models.Workspace{
 		Name:        req.Name,
 		Description: req.Description,
@@ -51,19 +51,31 @@ func (s *workspaceService) CreateWorkspace(userID uint, req dto.CreateWorkspaceR
 }
 
 func (s *workspaceService) GetMyWorkspaces(userID uint, search string) ([]dto.WorkspaceResponse, error) {
-	memberships, err := s.repo.FindByUserID(userID, search)
+	workspaces, err := s.repo.FindByUserID(userID, search)
 	if err != nil {
 		return nil, err
 	}
 
 	var responses []dto.WorkspaceResponse
-	for _, m := range memberships {
+	for _, w := range workspaces {
+		// determine role for the user in this workspace
+		role := ""
+		for _, m := range w.Memberships {
+			if m.UserID == userID {
+				role = m.Role
+				break
+			}
+		}
+		if role == "" && w.OwnerID == userID {
+			role = models.RoleOwner
+		}
+
 		responses = append(responses, dto.WorkspaceResponse{
-			ID:          m.Workspace.ID,
-			Name:        m.Workspace.Name,
-			Description: m.Workspace.Description,
-			Role:        m.Role,
-			OwnerName:   m.Workspace.Owner.Username, 
+			ID:          w.ID,
+			Name:        w.Name,
+			Description: w.Description,
+			Role:        role,
+			OwnerName:   w.Owner.Username,
 		})
 	}
 
@@ -71,161 +83,161 @@ func (s *workspaceService) GetMyWorkspaces(userID uint, search string) ([]dto.Wo
 }
 
 func (s *workspaceService) GetWorkspaceDetail(userID uint, workspaceID uint) (*dto.WorkspaceDetailResponse, error) {
-    workspace, err := s.repo.FindByID(workspaceID)
-    if err != nil {
-        return nil, err
-    }
+	workspace, err := s.repo.FindByID(workspaceID)
+	if err != nil {
+		return nil, err
+	}
 
-    isMember := false
-    for _, m := range workspace.Memberships {
-        if m.UserID == userID {
-            isMember = true
-            break
-        }
-    }
+	isMember := false
+	for _, m := range workspace.Memberships {
+		if m.UserID == userID {
+			isMember = true
+			break
+		}
+	}
 
-    if !isMember {
- 
-        return nil, errors.New("you are not a member of this workspace") 
-    }
+	if !isMember {
 
-  
-    var memberResponses []dto.WorkspaceMemberResponse
-    for _, m := range workspace.Memberships {
-        memberResponses = append(memberResponses, dto.WorkspaceMemberResponse{
-            UserID:   m.UserID,
-            Name:     m.User.Username, 
-            Email:    m.User.Email,
-            Role:     m.Role,
-            JoinedAt: m.JoinedAt.Format("2006-01-02"),
-        })
-    }
+		return nil, errors.New("you are not a member of this workspace")
+	}
 
-    response := &dto.WorkspaceDetailResponse{
-        ID:          workspace.ID,
-        Name:        workspace.Name,
-        Description: workspace.Description,
-        OwnerID:     workspace.OwnerID,
-        Members:     memberResponses,
-    }
+	var memberResponses []dto.WorkspaceMemberResponse
+	for _, m := range workspace.Memberships {
+		memberResponses = append(memberResponses, dto.WorkspaceMemberResponse{
+			UserID:   m.UserID,
+			Name:     m.User.Username,
+			Email:    m.User.Email,
+			Role:     m.Role,
+			JoinedAt: m.JoinedAt.Format("2006-01-02"),
+		})
+	}
 
-    return response, nil
+	response := &dto.WorkspaceDetailResponse{
+		ID:          workspace.ID,
+		Name:        workspace.Name,
+		Description: workspace.Description,
+		OwnerID:     workspace.OwnerID,
+		Members:     memberResponses,
+	}
+
+	return response, nil
 }
 
 func (s *workspaceService) UpdateWorkspace(userID uint, workspaceID uint, req dto.UpdateWorkspaceRequest) (*models.Workspace, error) {
 
-    workspace, err := s.repo.FindByID(workspaceID)
-    if err != nil {
-        return nil, err
-    }
+	workspace, err := s.repo.FindByID(workspaceID)
+	if err != nil {
+		return nil, err
+	}
 
-    isAuthorized := false
-    for _, m := range workspace.Memberships {
-        if m.UserID == userID {
-        
-            if m.Role == "owner" || m.Role == "admin" {
-                isAuthorized = true
-            }
-            break
-        }
-    }
+	isAuthorized := false
+	for _, m := range workspace.Memberships {
+		if m.UserID == userID {
 
-    if !isAuthorized {
-        return nil, errors.New("unauthorized: only owner or admin can update workspace")
-    }
+			if m.Role == "owner" || m.Role == "admin" {
+				isAuthorized = true
+			}
+			break
+		}
+	}
 
-    if req.Name != "" {
-        workspace.Name = req.Name
-    }
-    workspace.Description = req.Description
+	if !isAuthorized {
+		return nil, errors.New("unauthorized: only owner or admin can update workspace")
+	}
 
-    if err := s.repo.Update(workspace); err != nil {
-        return nil, err
-    }
+	if req.Name != "" {
+		workspace.Name = req.Name
+	}
+	workspace.Description = req.Description
 
-    return workspace, nil
+	if err := s.repo.Update(workspace); err != nil {
+		return nil, err
+	}
+
+	return workspace, nil
 }
 
 func (s *workspaceService) DeleteWorkspace(userID uint, workspaceID uint) error {
-    
-    workspace, err := s.repo.FindByID(workspaceID)
-    if err != nil {
-        return err
-    }
 
-    if workspace.OwnerID != userID {
-        return errors.New("unauthorized: only owner can delete workspace")
-    }
+	workspace, err := s.repo.FindByID(workspaceID)
+	if err != nil {
+		return err
+	}
 
-    return s.repo.Delete(workspaceID)
+	if workspace.OwnerID != userID {
+		return errors.New("unauthorized: only owner can delete workspace")
+	}
+
+	return s.repo.Delete(workspaceID)
 }
 
 func (s *workspaceService) AddMember(requesterID uint, workspaceID uint, req dto.AddMemberRequest) error {
 
-    requester, err := s.repo.FindMember(workspaceID, requesterID)
-    if err != nil {
-        return errors.New("access denied: you are not a member of this workspace")
-    }
-    if requester.Role != "owner" && requester.Role != "admin" {
-        return errors.New("unauthorized: only owner or admin can add members")
-    }
+	requester, err := s.repo.FindMember(workspaceID, requesterID)
+	if err != nil {
+		return errors.New("access denied: you are not a member of this workspace")
+	}
+	if requester.Role != "owner" && requester.Role != "admin" {
+		return errors.New("unauthorized: only owner or admin can add members")
+	}
 
-    targetUser, err := s.userRepo.FindByEmail(req.Email)
-    if err != nil {
-        return errors.New("user with this email not found")
-    }
+	targetUser, err := s.userRepo.FindByEmail(req.Email)
+	if err != nil {
+		return errors.New("user with this email not found")
+	}
 
-    _, err = s.repo.FindMember(workspaceID, targetUser.ID)
-    if err == nil {
-        return errors.New("user is already a member of this workspace")
-    }
+	_, err = s.repo.FindMember(workspaceID, targetUser.ID)
+	if err == nil {
+		return errors.New("user is already a member of this workspace")
+	}
 
+	newMember := models.WorkspaceMember{
+		WorkspaceID: workspaceID,
+		UserID:      targetUser.ID,
+		Role:        "viewer",
+	}
 
-    newMember := models.WorkspaceMember{
-        WorkspaceID: workspaceID,
-        UserID:      targetUser.ID,
-        Role:        "viewer", 
-    }
-
-    return s.repo.AddMember(&newMember)
+	return s.repo.AddMember(&newMember)
 }
 
 func (s *workspaceService) UpdateMemberRole(requesterID uint, workspaceID uint, targetUserID uint, req dto.UpdateMemberRoleRequest) error {
 
-    requester, err := s.repo.FindMember(workspaceID, requesterID)
-    if err != nil || (requester.Role != "owner" && requester.Role != "admin") {
-        return errors.New("unauthorized")
-    }
+	requester, err := s.repo.FindMember(workspaceID, requesterID)
+	if err != nil || (requester.Role != "owner" && requester.Role != "admin") {
+		return errors.New("unauthorized")
+	}
 
-    targetMember, err := s.repo.FindMember(workspaceID, targetUserID)
-    if err != nil {
-        return errors.New("member not found")
-    }
+	targetMember, err := s.repo.FindMember(workspaceID, targetUserID)
+	if err != nil {
+		return errors.New("member not found")
+	}
 
-    if targetMember.Role == "owner" {
-        return errors.New("cannot change role of the owner")
-    }
+	if targetMember.Role == "owner" {
+		return errors.New("cannot change role of the owner")
+	}
 
-    targetMember.Role = req.Role
-    return s.repo.UpdateMember(targetMember)
+	targetMember.Role = req.Role
+	return s.repo.UpdateMember(targetMember)
 }
 
 func (s *workspaceService) RemoveMember(requesterID uint, workspaceID uint, targetUserID uint) error {
- 
-    requester, err := s.repo.FindMember(workspaceID, requesterID)
-    if err != nil || (requester.Role != "owner" && requester.Role != "admin") {
-        return errors.New("unauthorized")
-    }
 
-    if requesterID == targetUserID { return errors.New("cannot kick yourself, please leave instead") }
+	requester, err := s.repo.FindMember(workspaceID, requesterID)
+	if err != nil || (requester.Role != "owner" && requester.Role != "admin") {
+		return errors.New("unauthorized")
+	}
 
-    targetMember, err := s.repo.FindMember(workspaceID, targetUserID)
-    if err != nil {
-        return errors.New("member not found")
-    }
-    if targetMember.Role == "owner" {
-        return errors.New("cannot remove workspace owner")
-    }
+	if requesterID == targetUserID {
+		return errors.New("cannot kick yourself, please leave instead")
+	}
 
-    return s.repo.RemoveMember(workspaceID, targetUserID)
+	targetMember, err := s.repo.FindMember(workspaceID, targetUserID)
+	if err != nil {
+		return errors.New("member not found")
+	}
+	if targetMember.Role == "owner" {
+		return errors.New("cannot remove workspace owner")
+	}
+
+	return s.repo.RemoveMember(workspaceID, targetUserID)
 }

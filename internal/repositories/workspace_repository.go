@@ -8,7 +8,7 @@ import (
 
 type WorkspaceRepository interface {
 	CreateWithMember(workspace *models.Workspace, member *models.WorkspaceMember) error
-	FindByUserID(userID uint, search string) ([]models.WorkspaceMember, error)
+	FindByUserID(userID uint, search string) ([]models.Workspace, error)
 	FindByID(workspaceID uint) (*models.Workspace, error)
 	Update(workspace *models.Workspace) error
 	Delete(id uint) error
@@ -47,20 +47,22 @@ func (r *workspaceRepository) CreateWithMember(workspace *models.Workspace, memb
 	})
 }
 
-func (r *workspaceRepository) FindByUserID(userID uint, search string) ([]models.WorkspaceMember, error) {
-	var memberships []models.WorkspaceMember
+func (r *workspaceRepository) FindByUserID(userID uint, search string) ([]models.Workspace, error) {
+	var workspaces []models.Workspace
 
-	query := r.db.Preload("Workspace").
-		Preload("Workspace.Owner").
-		Where("user_id = ?", userID)
+	query := r.db.Model(&models.Workspace{}).
+		Preload("Owner").
+		Preload("Memberships").
+		Joins("LEFT JOIN workspace_members ON workspace_members.workspace_id = workspaces.id").
+		Where("workspaces.owner_id = ? OR workspace_members.user_id = ?", userID, userID).
+		Distinct("workspaces.id")
 
 	if search != "" {
-		query = query.Joins("JOIN workspaces ON workspaces.id = workspace_members.workspace_id").
-			Where("workspaces.name ILIKE ?", "%"+search+"%")
+		query = query.Where("workspaces.name ILIKE ?", "%"+search+"%")
 	}
 
-	err := query.Find(&memberships).Error
-	return memberships, err
+	err := query.Find(&workspaces).Error
+	return workspaces, err
 }
 
 func (r *workspaceRepository) FindByID(id uint) (*models.Workspace, error) {
