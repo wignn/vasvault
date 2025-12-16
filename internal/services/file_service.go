@@ -26,6 +26,7 @@ type FileServiceInterface interface {
 	RemoveCategories(userID, fileID uint, categoryIDs []uint) error
 	UpdateCategories(userID, fileID uint, categoryIDs []uint) error
 	GetStorageSummary(userID uint) (*dto.StorageSummaryResponse, error)
+	RenameFile(userID, fileID uint, newName string) (*dto.FileResponse, error)
 }
 
 type FileService struct {
@@ -186,6 +187,61 @@ func (s *FileService) DeleteFile(fileID uint) error {
 		return fmt.Errorf("failed to delete file metadata: %w", err)
 	}
 	return nil
+}
+
+func (s *FileService) RenameFile(userID, fileID uint, newName string) (*dto.FileResponse, error) {
+	file, err := s.repository.FindByID(fileID)
+	if err != nil {
+		return nil, fmt.Errorf("file not found: %w", err)
+	}
+
+	if file.UserID != userID {
+		return nil, fmt.Errorf("unauthorized: file does not belong to user")
+	}
+
+	// determine extension
+	oldExt := filepath.Ext(file.Filepath)
+	if filepath.Ext(newName) == "" {
+		newName = newName + oldExt
+	}
+
+	newPath := filepath.Join(s.basePath, newName)
+
+	// prevent overwriting existing file
+	if _, err := os.Stat(newPath); err == nil {
+		return nil, fmt.Errorf("target filename already exists")
+	}
+
+	if err := os.Rename(file.Filepath, newPath); err != nil {
+		return nil, fmt.Errorf("failed to rename file on disk: %w", err)
+	}
+
+	file.Filename = newName
+	file.Filepath = newPath
+
+	if err := s.repository.Update(file); err != nil {
+		return nil, fmt.Errorf("failed to update file metadata: %w", err)
+	}
+
+	// build response
+	var categories []dto.CategorySimple
+	for _, cat := range file.Categories {
+		categories = append(categories, dto.CategorySimple{ID: cat.ID, Name: cat.Name, Color: cat.Color})
+	}
+
+	resp := &dto.FileResponse{
+		ID:          file.ID,
+		UserId:      file.UserID,
+		WorkspaceId: file.WorkspaceID,
+		FileName:    file.Filename,
+		FilePath:    file.Filepath,
+		MimeType:    file.Mimetype,
+		Size:        file.Size,
+		Categories:  categories,
+		CreatedAt:   file.UploadedAt,
+	}
+
+	return resp, nil
 }
 
 // AssignCategories menambahkan kategori ke file (tidak menghapus kategori yang sudah ada)

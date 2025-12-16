@@ -35,3 +35,7 @@ type StorageSummaryResponse struct {
 	RemainingBytes int64          `json:"remaining_bytes"`
 	LatestFiles    []FileResponse `json:"latest_files,omitempty"`
 }
+
+type RenameFileRequest struct {
+	NewName string `json:"new_name" binding:"required"`
+}

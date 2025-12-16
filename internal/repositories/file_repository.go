@@ -10,6 +10,7 @@ type FileRepositoryInterface interface {
 	Create(file *models.File) error
 	FindByID(id uint) (*models.File, error)
 	FindByIDWithCategories(id uint) (*models.File, error)
+	Update(file *models.File) error
 	ListUserFiles(userID uint) ([]models.File, error)
 	ListUserFilesWithCategories(userID uint) ([]models.File, error)
 	ListFilesByWorkspaceWithCategories(workspaceID uint) ([]models.File, error)
@@ -53,6 +54,10 @@ func (r *FileRepository) FindByIDWithCategories(id uint) (*models.File, error) {
 		return nil, err
 	}
 	return &file, nil
+}
+
+func (r *FileRepository) Update(file *models.File) error {
+	return r.db.Save(file).Error
 }
 
 func (r *FileRepository) ListUserFiles(userID uint) ([]models.File, error) {
